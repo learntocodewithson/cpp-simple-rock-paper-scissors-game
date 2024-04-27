@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cctype>
 #include "Notice.h"
-class View {
+class View: public Notice {
 
  protected:
  std::string title;
@@ -35,6 +35,12 @@ class View {
 
     // Remove leading and trailing spaces
     str = std::regex_replace(str, std::regex("^\\s+|\\s+$"), "");
+  }
+
+  void resetUserScanInput(std::string error_message){
+    std::cin.clear();
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    setErrorNotice(error_message);
   }
 };
 #endif

@@ -5,7 +5,7 @@
 #include "Base.h"
 #include "Notice.h"
 #include "View.h"
-class Game: public Base, public Notice, public View {
+class Game: public Base, public View {
  struct BattleOptions {
    int user, computer, win_result;
    std::string battle_rule;
@@ -142,44 +142,81 @@ class Game: public Base, public Notice, public View {
 
  void startTheGame(int win_limit){
   int user_battle_option, computer_battle_option;
+  bool validBattleOption = false;
   std::string battle_options[3] = {"Paper", "Scissors", "Rock"};
   // 1 - Paper, 2 - Scissors, 3 - Rock
   std::cout << displayBattleOptions();
   std::cout << ANSI_COLOR_ORANGE << "\n\tRound " << round_counter << ANSI_COLOR_RESET;
-  std::cout << "\n\tEnter your Battle Option Number: ";
-  std::cin >> user_battle_option;
-  
-  // Seed the random number generator
-  std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
-  computer_battle_option = (std::rand() % 3) + 1;
-
-  std::cout << "\n\tYou choose: " << ANSI_COLOR_MAGENTA << battle_options[user_battle_option-1] << ANSI_COLOR_RESET;
-  std::cout << "\n\tComputer choose: " << ANSI_COLOR_MAGENTA << battle_options[computer_battle_option-1] << ANSI_COLOR_RESET;
-  
-  int battle_result = battle(user_battle_option, computer_battle_option);
-  std::string battle_rule = battleRule(user_battle_option, computer_battle_option);
-
-  if(battle_rule != ""){
-    toUpperCase(battle_rule);
+  do {
     
-    std::cout << "\n\n\t" << displayLine() << "\n\t";
-    
-    if(battle_result == 1){
-      std::cout << ANSI_COLOR_GREEN;
-    }else if(battle_result == 2){
-      std::cout << ANSI_COLOR_RED;
-    }
-    std::cout << battle_rule << ANSI_COLOR_RESET << "\n\t" <<  displayLine();
+    if(hasNotice())
+      std::cout << displayNotice();
+
+    std::cout << "\n\tEnter your Battle Option Number: ";
+     if (!(std::cin >> user_battle_option)) {
+      resetUserScanInput("\n\tInvalid Battle Option");
+     }else{
+      
+       std::vector<int> battleOptionRange;
+       battleOptionRange.push_back(1);
+       battleOptionRange.push_back(2);
+       battleOptionRange.push_back(3);
+
+       if(!validateIfOutOfRange(battleOptionRange, user_battle_option)){
+        // start
+          validBattleOption = true;
+          resetNotice();
+
+          // Seed the random number generator
+          std::srand(static_cast<unsigned int>(std::time(nullptr)));
+
+          computer_battle_option = (std::rand() % 3) + 1;
+
+          std::cout << "\n\tYou choose: " << ANSI_COLOR_MAGENTA << battle_options[user_battle_option-1] << ANSI_COLOR_RESET;
+          std::cout << "\n\tComputer choose: " << ANSI_COLOR_MAGENTA << battle_options[computer_battle_option-1] << ANSI_COLOR_RESET;
+          
+          int battle_result = battle(user_battle_option, computer_battle_option);
+          std::string battle_rule = battleRule(user_battle_option, computer_battle_option);
+
+          if(battle_rule != ""){
+            toUpperCase(battle_rule);
+            
+            std::cout << "\n\n\t" << displayLine() << "\n\t";
+            
+            if(battle_result == 1){
+              std::cout << ANSI_COLOR_GREEN;
+            }else if(battle_result == 2){
+              std::cout << ANSI_COLOR_RED;
+            }
+            std::cout << battle_rule << ANSI_COLOR_RESET << "\n\t" <<  displayLine();
+          }
+            
+          
+          // increment user or computer winning count
+          processWinningCount(battle_result);
+          
+          if(user_win_count != win_limit && computer_win_count != win_limit){
+            std::cout << std::endl << displayBattleResult(battle_result);
+          }
+        // end
+       } else {
+        resetUserScanInput("\n\tInvalid Battle Option");
+       }
+      
+     }
+
+  } while(!validBattleOption);
+
+ }
+
+ bool validateIfOutOfRange(std::vector<int> rangeOfNumbers, int user_input){
+  for (int i = 0; i < rangeOfNumbers.size(); ++i){
+    if(rangeOfNumbers[i] == user_input)
+     return false;
   }
-    
   
-  // increment user or computer winning count
-  processWinningCount(battle_result);
-  
-  if(user_win_count != win_limit && computer_win_count != win_limit){
-    std::cout << std::endl << displayBattleResult(battle_result);
-  }
+  return true;
  }
 
  void processWinningCount(int battle_result){
@@ -275,8 +312,7 @@ class Game: public Base, public Notice, public View {
   return ANSI_COLOR_CYAN + std::string("\n\n\tList of Battle Options\n") +
    "\t1. Paper(papel)\n"
    "\t2. Scissors(gunting)\n"
-   "\t3. Rock(bato)\n"
-   "\t4. Back\n" + ANSI_COLOR_RESET;
+   "\t3. Rock(bato)\n" + ANSI_COLOR_RESET;
  }
 };
 #endif
