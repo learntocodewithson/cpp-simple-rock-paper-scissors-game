@@ -8,25 +8,26 @@
 class Game: public Base, public Notice, public View {
  struct BattleOptions {
    int user, computer, win_result;
+   std::string battle_rule;
  };
 
- int game_level;
+ int game_level, user_win_count, computer_win_count, round_counter;
  bool exit_game;
  std::vector<BattleOptions> battleRules;
-
-
 
  public: 
  Game(std::string t = ""){
   title = t;
+  user_win_count = computer_win_count = round_counter = 0;
   initialzeBattleRules();
  }
 
- BattleOptions rule(int user, int computer, int win_result){
+ BattleOptions rule(int user, int computer, int win_result, std::string battle_rule){
   BattleOptions option;
   option.user = user;
   option.computer = computer;
   option.win_result = win_result;
+  option.battle_rule = battle_rule;
 
   return option;
  }
@@ -35,10 +36,10 @@ class Game: public Base, public Notice, public View {
 
   /*
   user win
-  User Computer
-  1     3 
-  2     1
-  3     2
+  User         Computer
+  1(paper)      3 
+  2(scissors)   1
+  3(rock)       2
 
   computer win
   User Computer
@@ -54,14 +55,14 @@ class Game: public Base, public Notice, public View {
  */
 
   // user win
-  battleRules.push_back(rule(1, 3, 1));
-  battleRules.push_back(rule(2, 1, 1));
-  battleRules.push_back(rule(3, 2, 1));
+  battleRules.push_back(rule(1, 3, 1, "Paper covers Rock"));
+  battleRules.push_back(rule(2, 1, 1, "Scissors cuts Paper"));
+  battleRules.push_back(rule(3, 2, 1, "Rock crushes Scissors"));
 
   // computer win
-  battleRules.push_back(rule(1, 2, 2));
-  battleRules.push_back(rule(2, 3, 2));
-  battleRules.push_back(rule(3, 1, 2));
+  battleRules.push_back(rule(1, 2, 2, "Scissors cuts Paper"));
+  battleRules.push_back(rule(2, 3, 2, "Rock crushes Scissors"));
+  battleRules.push_back(rule(3, 1, 2, "Paper covers Rock"));
  }
 
  
@@ -115,27 +116,78 @@ class Game: public Base, public Notice, public View {
    } while(!exit_game);
  }
 
- void easyLevel(){
+ void battleNow(int win_limit, std::string level){
+  std::cout << ANSI_COLOR_ORANGE << "\n\tYou choose " << level << " level. Whoever got " << win_limit << " wins first, will be the winner." << ANSI_COLOR_RESET;
+  
+  do {
+    round_counter++; // start to round 1
+    startTheGame(win_limit);
+  } while(user_win_count != win_limit && computer_win_count != win_limit);
+
+  std::cout << ANSI_COLOR_GREEN << "\n\n\tUser Win: " << user_win_count << ANSI_COLOR_RESET;
+  std::cout << ANSI_COLOR_RED << "\n\tComputer Win: " << computer_win_count << std::endl << ANSI_COLOR_RESET;
+
+  if(user_win_count == win_limit){
+    setSuccessNotice("\n\tCongratulations, You Win!");
+  } else {
+    setErrorNotice("\n\tComputer Wins!, Better luck next time! :)");
+  }
+
+  resetUserComputerWinningScores();
+ }
+
+ void resetUserComputerWinningScores(){
+  user_win_count = computer_win_count = round_counter= 0;
+ }
+
+ void startTheGame(int win_limit){
   int user_battle_option, computer_battle_option;
   std::string battle_options[3] = {"Paper", "Scissors", "Rock"};
   // 1 - Paper, 2 - Scissors, 3 - Rock
   std::cout << displayBattleOptions();
+  std::cout << ANSI_COLOR_ORANGE << "\n\tRound " << round_counter << ANSI_COLOR_RESET;
   std::cout << "\n\tEnter your Battle Option Number: ";
   std::cin >> user_battle_option;
   
   // Seed the random number generator
   std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
- computer_battle_option = (std::rand() % 3) + 1;
+  computer_battle_option = (std::rand() % 3) + 1;
 
+  std::cout << "\n\tYou choose: " << ANSI_COLOR_MAGENTA << battle_options[user_battle_option-1] << ANSI_COLOR_RESET;
+  std::cout << "\n\tComputer choose: " << ANSI_COLOR_MAGENTA << battle_options[computer_battle_option-1] << ANSI_COLOR_RESET;
+  
+  int battle_result = battle(user_battle_option, computer_battle_option);
+  std::string battle_rule = battleRule(user_battle_option, computer_battle_option);
 
- std::cout << "\n\tUser choose: " << battle_options[user_battle_option-1];
- std::cout << "\n\tComputer choose: " << battle_options[computer_battle_option-1];
- 
- int battle_result = battle(user_battle_option, computer_battle_option);
+  if(battle_rule != ""){
+    toUpperCase(battle_rule);
+    
+    std::cout << "\n\n\t" << displayLine() << "\n\t";
+    
+    if(battle_result == 1){
+      std::cout << ANSI_COLOR_GREEN;
+    }else if(battle_result == 2){
+      std::cout << ANSI_COLOR_RED;
+    }
+    std::cout << battle_rule << ANSI_COLOR_RESET << "\n\t" <<  displayLine();
+  }
+    
+  
+  // increment user or computer winning count
+  processWinningCount(battle_result);
+  
+  if(user_win_count != win_limit && computer_win_count != win_limit){
+    std::cout << std::endl << displayBattleResult(battle_result);
+  }
+ }
 
- std::cout << std::endl << displayBattleResult(battle_result);
-
+ void processWinningCount(int battle_result){
+  if(battle_result == 1){
+    user_win_count++;
+  }else if(battle_result == 2){
+    computer_win_count++;
+  }
  }
 
  int battle(int user_battle_option, int computer_battle_option){
@@ -154,9 +206,24 @@ class Game: public Base, public Notice, public View {
   return 0;
  }
 
+ std::string battleRule(int user_battle_option, int computer_battle_option){
+  if(user_battle_option == computer_battle_option)
+   return "";
+
+  for(int i = 0; i < battleRules.size(); i++){
+   if(battleRules[i].user == user_battle_option && battleRules[i].computer == computer_battle_option)
+    return battleRules[i].battle_rule;
+  }
+
+  return "";
+ }
+
  std::string displayBattleResult(int win_result){
   std::string battle_result = "";
 
+  std::cout << ANSI_COLOR_GREEN << "\n\tUser Win: " << user_win_count << ANSI_COLOR_RESET;
+  std::cout << ANSI_COLOR_RED << "\n\tComputer Win: " << computer_win_count << std::endl << ANSI_COLOR_RESET;
+  
   switch (win_result)
   {
   case 0:
@@ -173,14 +240,16 @@ class Game: public Base, public Notice, public View {
   return battle_result;
  }
 
-
+ void easyLevel(){
+  battleNow(3, "easy");
+ }
 
  void mediumLevel(){
-  std::cout << "Medium";
+  battleNow(7, "medium");
  }
 
  void hardLevel(){
-  std::cout << "Hard";
+  battleNow(10, "hard");
  }
 
  void settings(){
@@ -203,7 +272,7 @@ class Game: public Base, public Notice, public View {
  }
 
  std::string displayBattleOptions(){
-  return ANSI_COLOR_CYAN + std::string("\tList of Battle Options\n") +
+  return ANSI_COLOR_CYAN + std::string("\n\n\tList of Battle Options\n") +
    "\t1. Paper(papel)\n"
    "\t2. Scissors(gunting)\n"
    "\t3. Rock(bato)\n"
